@@ -30,28 +30,28 @@ class UsersController(val userService: UserService) {
         return userService.addUser(userInput)
     }
 
-    @PutMapping("/users/{userId}")
+    @PutMapping("/{userId}")
     @ResponseStatus(HttpStatus.OK)
     fun editUser(@Valid @RequestBody userInput: UserDTO,@PathVariable userId: Int): UserDTO {
         logger.info { "request received [PUT] /users/$userId" }
         return userService.editUser(userInput, userId)
     }
 
-    @GetMapping("/users/{userId}")
+    @GetMapping("/{userId}")
     @ResponseStatus(HttpStatus.OK)
     fun retrieveUser(@PathVariable userId: Int): UserDTO {
         logger.info { "request received [GET] /users/$userId" }
         return userService.retrieveUser(userId)
     }
 
-    @GetMapping("/users")
+    @GetMapping
     @ResponseStatus(HttpStatus.OK)
     fun retrieveAllUser(): List<UserDTO> {
         logger.info { "request received [GET] /users" }
         return userService.retrieveAllUser()
     }
 
-    @DeleteMapping("/users/{userId}")
+    @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun removeUser(@PathVariable userId: Int){
         logger.info { "request received [DELETE] /users/$userId" }
