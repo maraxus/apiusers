@@ -31,6 +31,7 @@ dependencies {
 
 	runtimeOnly("com.h2database:h2")
 //	runtimeOnly("org.postgresql:postgresql")
+	runtimeOnly("com.oracle.database.jdbc:ojdbc11")
 
 	// testing
 	testImplementation("io.mockk:mockk:1.13.9")
@@ -49,4 +50,12 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+sourceSets {
+	test {
+		java {
+			setSrcDirs(mutableListOf("integration/aniq/dev/apiusers", "unit/aniq/dev/apiusers"))
+		}
+	}
 }
