@@ -11,8 +11,9 @@ import org.springframework.test.web.servlet.get
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-class UsersControllerTest (@Autowired mockMvc: MockMvc){
+class UsersControllerTest (){
 
+    @Autowired
     lateinit var mockMvc: MockMvc
 
     @Test
