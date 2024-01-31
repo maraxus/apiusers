@@ -11,7 +11,7 @@ class UserService(val userRepository: UserRepositoryInterface) {
 
     fun addUser(user: UserDTO): UserDTO {
         val userToCreate = user.let {
-            User(name = it.name, nick = it.nick, birth_date = it.birth_date, stack = it.stack ?: emptySet(), id = null)
+            User(name = it.name, nick = it.nick, birthDate = it.birthDate, stack = it.stack ?: emptySet(), id = null)
         }
         return userRepository.save(userToCreate).asDto()
     }
@@ -24,7 +24,7 @@ class UserService(val userRepository: UserRepositoryInterface) {
         foundUser.apply {
             name = changedUser.name
             nick = changedUser.nick
-            birth_date = changedUser.birth_date
+            birthDate = changedUser.birthDate
             stack = changedUser.stack ?: mutableSetOf()
         }
         return userRepository.save(foundUser).asDto()
@@ -48,5 +48,5 @@ class UserService(val userRepository: UserRepositoryInterface) {
 }
 
 private fun User.asDto(): UserDTO {
-    return UserDTO(id, nick, name, birth_date, stack)
+    return UserDTO(id, nick, name, birthDate, stack)
 }
