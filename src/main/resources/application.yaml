@@ -9,6 +9,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create
+  jackson:
+    property-naming-strategy: SNAKE_CASE
 
 #spring:
 #  application:
