@@ -1,16 +1,21 @@
 package aniq.dev.apiusers.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.junit.jupiter.api.MethodOrderer
+import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
+@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class UsersControllerIntegrationTest (){
 
     @Autowired
@@ -19,46 +24,57 @@ class UsersControllerIntegrationTest (){
     @Autowired
     lateinit var serializer: ObjectMapper
 
+    companion object {
+        var validIdtoOperate = 0
+        val validName = "Jonh Doe"
+        val validNick = "Blue pen"
+        val validbirthDate = "2087-07-02T15:00:45"
+        val validStack = listOf("javascript", "Go")
+    }
+
     @Test
+    @Order(1)
     fun postShouldSaveAValidUserAndReturnIt() {
 
-        mockMvc.post("/users") {
+        val result  = mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
             content = serializer.writeValueAsString(mockUserInput())
         }
             .andExpect { status { isCreated() } }
             .andExpect { content { contentType(MediaType.APPLICATION_JSON) } }
-            .andExpect { jsonPath("$.id") { isNumber() } }
+            .andExpect { jsonPath("$.id") { isNumber() } }.andReturn().response.contentAsString
+
+        validIdtoOperate = serializer.readTree(result)["id"].intValue()
     }
 
     private fun mockUserInput(type: String? = null): Any {
         when(type) {
             "wrongStack" -> return object {
-                val name = "Jonh Doe"
-                val nick = "Blue pen"
-                val birth_date = "2087-07-02T15:00:45"
+                val name = validName
+                val nick = validNick
+                val birth_date = validbirthDate
                 val stack = 324
             }
 
             "wrongDate" -> return object {
-                val name = "Jonh Doe"
-                val nick = "Blue pen"
+                val name = validName
+                val nick = validNick
+                val stack = validStack
                 val birth_date = "asdfa"
-                val stack = listOf("javascript", "Go")
             }
 
             "noName" -> return object {
-                val nick = "Blue pen"
-                val birth_date = "2087-07-02T15:00:45"
-                val stack = listOf("javascript", "Go")
+                val nick = validNick
+                val birth_date = validbirthDate
+                val stack = validStack
             }
 
             //valid
             else -> return object {
-                val name = "Jonh Doe"
-                val nick = "Blue pen"
-                val birth_date = "2087-07-02T15:00:45"
-                val stack = listOf("javascript", "Go")
+                val name = validName
+                val nick = validNick
+                val birth_date = validbirthDate
+                val stack = validStack
             }
 
         }
@@ -73,6 +89,7 @@ class UsersControllerIntegrationTest (){
 //    }
 
     @Test
+    @Order(2)
     fun postShouldFailWithInsufficientInput() {
         mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
@@ -81,6 +98,7 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
+    @Order(3)
     fun postShouldFailWithWrongDateType() {
         mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
@@ -89,10 +107,29 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
+    @Order(4)
     fun postShouldFailWithWrongStackFormat() {
         mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
             content = serializer.writeValueAsString(mockUserInput("wrongStack"))
         }.andExpect { status { is4xxClientError() } }
     }
+
+    @Test
+    @Order(5)
+    fun getShouldRetrieveUserPassingValidId() {
+        val url = "/users/$validIdtoOperate"
+
+        val result = mockMvc.get(url)
+            .andExpect { status { isOk() } }
+            .andExpect { jsonPath("$.id"){ value(validIdtoOperate) } }
+            .andExpect { jsonPath("$.name"){ value(validName) } }
+            .andExpect { jsonPath("$.nick"){ value(validNick) } }
+            .andExpect { jsonPath("$.birth_date"){ value(validbirthDate) } }
+            .andExpect { jsonPath("$.stack"){ isArray() } }
+//            .andExpect { jsonPath("$.stack[0]"){ value(validStack[0]) } }
+//            .andExpect { jsonPath("$.stack[1]"){ value(validStack[1]) } }
+    }
+
+
 }
