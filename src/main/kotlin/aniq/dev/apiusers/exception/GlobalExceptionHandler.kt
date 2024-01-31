@@ -40,6 +40,6 @@ class GlobalExceptionHandler: ResponseEntityExceptionHandler() {
     @ExceptionHandler(UserNotFoundException::class)
     fun handleNotFoundException(exception: UserNotFoundException, webRequest: WebRequest): ResponseEntity<Any> {
         logger.error("request=${webRequest.getDescription(false)} 404 not found  error=${exception.message}", exception)
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(object {val errors = listOf("${exception.message}")})
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(object {val errors = listOf("${exception.message}")})
     }
 }

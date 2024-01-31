@@ -131,5 +131,14 @@ class UsersControllerIntegrationTest (){
 //            .andExpect { jsonPath("$.stack[1]"){ value(validStack[1]) } }
     }
 
+    @Test
+    @Order(6)
+    fun getShouldFailWithUnknownId() {
+        val url = "/users/2"
+        val result = mockMvc.get(url)
+            .andExpect { status { isNotFound() } }
+            .andReturn().resolvedException
+    }
+
 
 }
