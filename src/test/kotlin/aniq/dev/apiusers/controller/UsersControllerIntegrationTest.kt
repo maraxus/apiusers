@@ -12,6 +12,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
+import org.springframework.test.web.servlet.put
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -49,6 +50,12 @@ class UsersControllerIntegrationTest (){
 
     private fun mockUserInput(type: String? = null): Any {
         when(type) {
+            "modified" -> return object {
+                val name = "$validName Bar"
+                val nick = validNick
+                val birth_date = validbirthDate
+                val stack = validStack
+            }
             "wrongStack" -> return object {
                 val name = validName
                 val nick = validNick
@@ -135,9 +142,24 @@ class UsersControllerIntegrationTest (){
     @Order(6)
     fun getShouldFailWithUnknownId() {
         val url = "/users/2"
-        val result = mockMvc.get(url)
+        mockMvc.get(url)
             .andExpect { status { isNotFound() } }
-            .andReturn().resolvedException
+    }
+
+    @Test
+    @Order(7)
+    fun updateShouldSaveChangesWithValidFormat() {
+        val url = "/users/$validIdtoOperate"
+        mockMvc.put(url) {
+            contentType = MediaType.APPLICATION_JSON
+            content = serializer.writeValueAsString(mockUserInput("modified"))
+        }
+            .andExpect { status { isOk() } }
+            .andExpect { jsonPath("$.id"){ value(validIdtoOperate) } }
+            .andExpect { jsonPath("$.name"){ value("$validName Bar") } }
+            .andExpect { jsonPath("$.nick"){ value(validNick) } }
+            .andExpect { jsonPath("$.birth_date"){ value(validbirthDate) } }
+            .andExpect { jsonPath("$.stack"){ isArray() } }
     }
 
 
