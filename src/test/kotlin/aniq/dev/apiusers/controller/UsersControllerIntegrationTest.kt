@@ -9,10 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
-import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.get
-import org.springframework.test.web.servlet.post
-import org.springframework.test.web.servlet.put
+import org.springframework.test.web.servlet.*
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -30,7 +27,7 @@ class UsersControllerIntegrationTest (){
         val validName = "Jonh Doe"
         val validNick = "Blue pen"
         val validbirthDate = "2087-07-02T15:00:45"
-        val validStack = listOf("javascript", "Go")
+        val validStack = mutableListOf("javascript", "Go")
     }
 
     @Test
@@ -161,6 +158,28 @@ class UsersControllerIntegrationTest (){
             .andExpect { jsonPath("$.birth_date"){ value(validbirthDate) } }
             .andExpect { jsonPath("$.stack"){ isArray() } }
     }
+
+    @Test
+    @Order(8)
+    fun updateShouldFailWithInvalidFormat() {
+        val url = "/users/$validIdtoOperate"
+        mockMvc.put(url) {
+            contentType = MediaType.APPLICATION_JSON
+            content = serializer.writeValueAsString(mockUserInput("wrongDate"))
+        }
+            .andExpect { status { is4xxClientError() } }
+    }
+
+    @Test
+    @Order(9)
+    fun deleteShouldBeSuccessfulWithSavedId() {
+        val url = "/users/$validIdtoOperate"
+        mockMvc.delete(url)
+            .andExpect { status { isNoContent() } }
+        mockMvc.get(url).andExpect { status { isNotFound() } }
+    }
+
+
 
 
 }
