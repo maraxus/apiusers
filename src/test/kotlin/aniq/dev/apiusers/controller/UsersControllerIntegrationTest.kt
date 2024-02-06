@@ -73,6 +73,13 @@ class UsersControllerIntegrationTest (){
                 val stack = validStack
             }
 
+            "tooLongNick" -> return object {
+                val name = validName
+                val nick = validNick.padEnd(33, 'X')
+                val birth_date = validbirthDate
+                val stack = validStack
+            }
+
             //valid
             else -> return object {
                 val name = validName
@@ -94,6 +101,15 @@ class UsersControllerIntegrationTest (){
 
     @Test
     @Order(2)
+    fun postShouldFailWithTooLongInput() {
+        mockMvc.post("/users") {
+            contentType = MediaType.APPLICATION_JSON
+            content = serializer.writeValueAsString(mockUserInput("tooLongNick"))
+        }.andExpect { status { is4xxClientError() } }
+    }
+
+    @Test
+    @Order(3)
     fun postShouldFailWithInsufficientInput() {
         mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
@@ -102,7 +118,7 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(3)
+    @Order(4)
     fun postShouldFailWithWrongDateType() {
         mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
@@ -111,7 +127,7 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     fun postShouldFailWithWrongStackFormat() {
         mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
@@ -120,7 +136,7 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     fun getShouldRetrieveUserPassingValidId() {
         val url = "/users/$validIdtoOperate"
 
@@ -136,7 +152,7 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     fun getShouldFailWithUnknownId() {
         val url = "/users/2"
         mockMvc.get(url)
@@ -144,7 +160,7 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     fun updateShouldSaveChangesWithValidFormat() {
         val url = "/users/$validIdtoOperate"
         mockMvc.put(url) {
@@ -160,7 +176,7 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(8)
+    @Order(9)
     fun updateShouldFailWithInvalidFormat() {
         val url = "/users/$validIdtoOperate"
         mockMvc.put(url) {
@@ -171,7 +187,7 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(9)
+    @Order(10)
     fun deleteShouldBeSuccessfulWithSavedId() {
         val url = "/users/$validIdtoOperate"
         mockMvc.delete(url)

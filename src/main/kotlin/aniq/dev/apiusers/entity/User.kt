@@ -23,5 +23,5 @@ data class User (
 
     @ElementCollection
     @Column(name = "stack", length = 32)
-    var stack: Set<String> = mutableSetOf()
+    var stack: Set<String>? = mutableSetOf()
 )
