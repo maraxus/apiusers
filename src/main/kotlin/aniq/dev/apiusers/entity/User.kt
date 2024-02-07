@@ -21,7 +21,7 @@ data class User (
     @Column(name = "birth_date")
     var birthDate: LocalDateTime,
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @Column(name = "stack", length = 32)
     var stack: Set<String>? = mutableSetOf()
 )

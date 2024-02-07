@@ -1,29 +1,30 @@
 package aniq.dev.apiusers.service
 
 import aniq.dev.apiusers.dto.UserDTO
+import aniq.dev.apiusers.exception.UserNotFoundException
 import aniq.dev.apiusers.repository.UserRepositoryInterface
-import jakarta.annotation.PostConstruct
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.assertThrows
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.orm.jpa.JpaSystemException
 import java.time.LocalDateTime
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = Replace.NONE)
+@SpringBootTest
 class UserServiceIntegrationTest {
 
     @Autowired
-    lateinit var repository: UserRepositoryInterface
-
     lateinit var service: UserService
 
-    @PostConstruct
-    fun initializeService() {
-        service = UserService(repository)
+    @Autowired
+    lateinit var userRepository: UserRepositoryInterface
+
+    @AfterEach
+    fun cleanUp() {
+        userRepository.deleteAll()
     }
 
     @Test
@@ -37,11 +38,9 @@ class UserServiceIntegrationTest {
     @Test
     fun saveInvalidUserTooLong() {
         val user  = UserDTOFactory.valueTooLong()
-        assertThrows<Throwable> {
+        assertThrows<JpaSystemException> {
             service.addUser(user)
         }
-//        val saved = service.addUser(user)
-//        assertTrue(saved.id is Int)
 
     }
 
@@ -54,33 +53,68 @@ class UserServiceIntegrationTest {
     }
 
     @Test
-    fun saveInvalidUserNotUnique() {}
+    fun addRepeatedUserName() {
+        addValidUserAndReturnIt()
+        val anotherUser = UserDTOFactory.validNullId()
+        assertThrows<DataIntegrityViolationException> {
+            service.addUser(anotherUser)
+        }
+    }
+
+    private fun addValidUserAndReturnIt(): UserDTO {
+        val user = UserDTOFactory.validNullId()
+        return service.addUser(user)
+    }
 
     @Test
-    fun saveInvalidUserStackMemberTooLong() {}
+    fun saveInvalidUserStackMemberTooLong() {
+        val user = UserDTOFactory.stackWithTooLongMemberValue()
+        assertThrows<JpaSystemException> {
+            service.addUser(user)
+        }
+
+    }
 
     @Test
-    fun saveInvalidUserStackEmptyButNotNull() {}
+    fun retrieveValidUser() {
+        val savedUser = addValidUserAndReturnIt()
+        val retrievedUser: UserDTO = service.retrieveUser(savedUser.id!!)
+        assertTrue(savedUser == retrievedUser)
+    }
 
     @Test
-    fun retrieveValidUser() {}
+    fun retrieveAllUser() {
+        val validUsersToSave  = UserDTOFactory.validUsersToSave((2..10).random())
+        val users = validUsersToSave.map { service.addUser(it) }
+        assertTrue(users.size == validUsersToSave.size)
+        assertTrue(
+            users.map { it.apply { id = null } }
+            .containsAll(validUsersToSave)
+        )
+    }
 
     @Test
-    fun retrieveAllUser() {}
+    fun removeValidUser() {
+        val userToDelete = addValidUserAndReturnIt().id
+        service.removeUser(userToDelete!!)
+        assertThrows<UserNotFoundException> {
+            service.retrieveUser(userToDelete)
+        }
+    }
 
     @Test
-    fun removeValidUser() {}
-
-    @Test
-    fun removeInvalidUserFails() {}
-
+    fun removeInvalidUserFails() {
+        assertThrows<UserNotFoundException> {
+            service.removeUser(-1)
+        }
+    }
 }
 
 object UserDTOFactory {
-    val exampleUser = UserDTO(
+    private val exampleUser = UserDTO(
         null,
         "Blue pen",
-        "Jonh Doe",
+        "John Doe",
         LocalDateTime.parse("2087-07-02T15:00:45"),
         mutableSetOf("javascript", "Go")
     )
@@ -96,4 +130,17 @@ object UserDTOFactory {
     fun nameNull(): UserDTO {
         return exampleUser.copy(name = "")
     }
+
+    fun stackWithTooLongMemberValue(): UserDTO {
+        return exampleUser.copy(stack = mutableSetOf("Javascript", "Go", "Blastoise".padEnd(44, 'e')))
+    }
+
+    fun validUsersToSave(lenght: Int): List<UserDTO> {
+        return mutableListOf<UserDTO>().apply {
+            (1..lenght).forEach {
+                this.add(exampleUser.copy(name = "${exampleUser.name} $it"))
+            }
+        }
+    }
+
 }

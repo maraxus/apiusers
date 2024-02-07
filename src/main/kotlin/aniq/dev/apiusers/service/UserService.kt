@@ -13,7 +13,7 @@ class UserService(val userRepository: UserRepositoryInterface) {
         val userToCreate = user.let {
             User(name = it.name, nick = it.nick, birthDate = it.birthDate, stack = it.stack ?: emptySet(), id = null)
         }
-        return userRepository.save(userToCreate).asDto()
+        return userRepository.saveAndFlush(userToCreate).asDto()
     }
 
     fun editUser(changedUser: UserDTO, userId: Int): UserDTO {

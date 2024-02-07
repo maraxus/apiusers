@@ -1,8 +1,8 @@
 package aniq.dev.apiusers.repository
 
 import aniq.dev.apiusers.entity.User
-import org.springframework.data.repository.CrudRepository
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
 
-interface UserRepositoryInterface: CrudRepository<User, Int> {
-
-}
+@Repository
+interface UserRepositoryInterface: JpaRepository<User, Int> 
