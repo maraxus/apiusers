@@ -47,7 +47,7 @@ class UserServiceIntegrationTest {
     @Test
     fun saveInvalidUserBlank() {
         val user = UserDTOFactory.nameNull()
-        assertThrows<Throwable> {
+        assertThrows<DataIntegrityViolationException> {
             service.addUser(user)
         }
     }

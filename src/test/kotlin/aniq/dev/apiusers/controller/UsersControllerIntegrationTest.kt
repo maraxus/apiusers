@@ -1,19 +1,19 @@
 package aniq.dev.apiusers.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.junit.jupiter.api.MethodOrderer
-import org.junit.jupiter.api.Order
+import org.hamcrest.Matchers.*
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestMethodOrder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.junit.jupiter.api.AfterEach
 import org.springframework.http.MediaType
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.test.jdbc.JdbcTestUtils
 import org.springframework.test.web.servlet.*
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class UsersControllerIntegrationTest (){
 
     @Autowired
@@ -22,30 +22,32 @@ class UsersControllerIntegrationTest (){
     @Autowired
     lateinit var serializer: ObjectMapper
 
+    @AfterEach
+    fun setDown(@Autowired jdbcTemplate: JdbcTemplate) {
+        JdbcTestUtils.deleteFromTables(jdbcTemplate, "user_stack")
+        JdbcTestUtils.deleteFromTables(jdbcTemplate, "users")
+    }
+
     companion object {
-        var validIdtoOperate = 0
         val validName = "Jonh Doe"
         val validNick = "Blue pen"
-        val validbirthDate = "2087-07-02T15:00:45"
+        val validbirthDate = "1987-07-02T15:00:45"
         val validStack = mutableListOf("javascript", "Go")
     }
 
     @Test
-    @Order(1)
     fun postShouldSaveAValidUserAndReturnIt() {
-
-        val result  = mockMvc.post("/users") {
+        mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
             content = serializer.writeValueAsString(mockUserInput())
         }
             .andExpect { status { isCreated() } }
             .andExpect { content { contentType(MediaType.APPLICATION_JSON) } }
-            .andExpect { jsonPath("$.id") { isNumber() } }.andReturn().response.contentAsString
+            .andExpect { jsonPath("$.id") { isNumber() } }
 
-        validIdtoOperate = serializer.readTree(result)["id"].intValue()
     }
 
-    private fun mockUserInput(type: String? = null): Any {
+    protected fun mockUserInput(type: Any? = null): Any {
         when(type) {
             "modified" -> return object {
                 val name = "$validName Bar"
@@ -80,6 +82,20 @@ class UsersControllerIntegrationTest (){
                 val stack = validStack
             }
 
+            "futureBirthDate" -> return object {
+                val name = validName
+                val nick = validNick
+                val birth_date = validbirthDate.replaceFirst("1987", "2087")
+                val stack = validStack
+            }
+
+            is Int -> return object {
+                val name = "$validName $type"
+                val nick = validNick
+                val birth_date = validbirthDate
+                val stack = validStack
+            }
+
             //valid
             else -> return object {
                 val name = validName
@@ -91,16 +107,7 @@ class UsersControllerIntegrationTest (){
         }
     }
 
-//    @Test
-//    fun postShouldFailWithSameInputNamesCantBeRepeated() {
-//        mockMvc.post("/users") {
-//            contentType = MediaType.APPLICATION_JSON
-//            content = serializer.writeValueAsString(mockValidUserInput())
-//        }
-//    }
-
     @Test
-    @Order(2)
     fun postShouldFailWithTooLongInput() {
         mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
@@ -109,7 +116,6 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(3)
     fun postShouldFailWithInsufficientInput() {
         mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
@@ -118,7 +124,6 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(4)
     fun postShouldFailWithWrongDateType() {
         mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
@@ -127,7 +132,14 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(5)
+    fun postShouldFailWithFutureDateType() {
+        mockMvc.post("/users") {
+            contentType = MediaType.APPLICATION_JSON
+            content = serializer.writeValueAsString(mockUserInput("futureBirthDate"))
+        }.andExpect { status { is4xxClientError() } }
+    }
+
+    @Test
     fun postShouldFailWithWrongStackFormat() {
         mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
@@ -136,8 +148,8 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(6)
     fun getShouldRetrieveUserPassingValidId() {
+        val validIdtoOperate = saveValidUserRetrunId()
         val url = "/users/$validIdtoOperate"
 
         val result = mockMvc.get(url)
@@ -152,7 +164,6 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(7)
     fun getShouldFailWithUnknownId() {
         val url = "/users/2"
         mockMvc.get(url)
@@ -160,25 +171,39 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(8)
     fun updateShouldSaveChangesWithValidFormat() {
-        val url = "/users/$validIdtoOperate"
+
+        val validIdToOperate = saveValidUserRetrunId()
+
+        val url = "/users/$validIdToOperate"
         mockMvc.put(url) {
             contentType = MediaType.APPLICATION_JSON
             content = serializer.writeValueAsString(mockUserInput("modified"))
         }
             .andExpect { status { isOk() } }
-            .andExpect { jsonPath("$.id"){ value(validIdtoOperate) } }
+            .andExpect { jsonPath("$.id"){ value(validIdToOperate) } }
             .andExpect { jsonPath("$.name"){ value("$validName Bar") } }
             .andExpect { jsonPath("$.nick"){ value(validNick) } }
             .andExpect { jsonPath("$.birth_date"){ value(validbirthDate) } }
             .andExpect { jsonPath("$.stack"){ isArray() } }
     }
 
+    private fun saveValidUserRetrunId(): Int {
+        return mockMvc.post("/users") {
+            contentType = MediaType.APPLICATION_JSON
+            content = serializer.writeValueAsString(mockUserInput())
+        }
+            .andReturn()
+            .response.contentAsString
+            .run {
+                serializer.readTree(this).get("id").intValue()
+            }
+    }
+
     @Test
-    @Order(9)
     fun updateShouldFailWithInvalidFormat() {
-        val url = "/users/$validIdtoOperate"
+        val validIdToOperate = saveValidUserRetrunId()
+        val url = "/users/$validIdToOperate"
         mockMvc.put(url) {
             contentType = MediaType.APPLICATION_JSON
             content = serializer.writeValueAsString(mockUserInput("wrongDate"))
@@ -187,15 +212,82 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    @Order(10)
     fun deleteShouldBeSuccessfulWithSavedId() {
-        val url = "/users/$validIdtoOperate"
+        val validIdToOperate = saveValidUserRetrunId()
+        val url = "/users/$validIdToOperate"
         mockMvc.delete(url)
             .andExpect { status { isNoContent() } }
         mockMvc.get(url).andExpect { status { isNotFound() } }
     }
 
+    @Test
+     fun deleteShouldFailWithUnknownId() {
+        val url: String = "/users/-1"
+        mockMvc.delete(url)
+            .andExpect {
+                status { isNotFound() }
+            }
+    }
 
+    @Test
+    fun getAllShouldReturnListOfUsersPagedOnePage() {
+        val defaultPageSize = 15
+        val randomNumberOfUsers = (1..defaultPageSize).random()
+        populateUsers(randomNumberOfUsers)
+        mockMvc.get("/users")
+            .andExpect {
+                status { isOk() }
+            }
+            .andExpect {
+                content {
+                    jsonPath("$.records") { isArray() }
+                    jsonPath( "$.records", hasSize<Array<Any>>(randomNumberOfUsers))
+                }
+            }
+    }
+    @Test
+    fun getAllShouldReturnListOfUsersPagedVariousPages() {
+        val defaultPageSize = 15
+        val randomNumberOfUsers = (defaultPageSize..35).random()
+        populateUsers(randomNumberOfUsers)
+        mockMvc.get("/users")
+            .andExpect {
+                status { isPartialContent() }
+            }
+            .andExpect {
+                content {
+                    jsonPath( "$.records", hasSize<Array<Any>>(defaultPageSize))
+                }
+            }
+    }
+//    @Test
+//    fun getAllShouldReturnListOfUsers() {
+//        val randomNumberOfUsers = (1..20).random()
+//        val defaultPageSize = 15
+//        populateUsers(randomNumberOfUsers)
+//        mockMvc.get("/users")
+//            .andExpect {
+//                status { if(randomNumberOfUsers > defaultPageSize) { isPartialContent() } else { isOk() } }
+//            }
+//            .andExpect {
+//                content {
+//                    jsonPath("$.records") { isArray() }
+//                    if(randomNumberOfUsers > defaultPageSize) {
+//                        jsonPath( "$.records", hasSize<Array<Any>>(randomNumberOfUsers))
+//                    } else {
+//                        jsonPath( "$.records", hasSize<Array<Any>>(defaultPageSize))
+//                    }
+//                }
+//            }
+//    }
 
+    private fun populateUsers(numberOfUsers: Int) {
+        (1..numberOfUsers).iterator().forEach {
+            mockMvc.post("/users"){
+                contentType = MediaType.APPLICATION_JSON
+                content = serializer.writeValueAsString(mockUserInput(it))
+            }
+        }
+    }
 
 }
