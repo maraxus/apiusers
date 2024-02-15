@@ -4,19 +4,37 @@ import aniq.dev.apiusers.dto.UserDTO
 import aniq.dev.apiusers.service.UserService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.validation.Valid
+import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties.Pageable
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.data.web.PageableDefault
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver
+import org.springframework.data.web.SortHandlerMethodArgumentResolver
+import org.springframework.data.web.config.PageableHandlerMethodArgumentResolverCustomizer
+import org.springframework.data.web.config.SortHandlerMethodArgumentResolverCustomizer
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
+import java.util.*
+
+
+const val PAGE_SIZE_DEFAULT = 15
 
 private val logger = KotlinLogging.logger {}
+
+@Configuration
+class PageableCustomizer {
+    @Bean
+    fun pageableCustomizer(): PageableHandlerMethodArgumentResolverCustomizer {
+        return PageableHandlerMethodArgumentResolverCustomizer { p: PageableHandlerMethodArgumentResolver ->
+            p.setSizeParameterName("page_size")
+
+        }
+    }
+
+}
 
 @Validated
 @RestController
@@ -45,10 +63,17 @@ class UsersController(val userService: UserService) {
     }
 
     @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    fun retrieveAllUser(): List<UserDTO> {
+    fun retrieveAllUser(
+        @PathVariable(required = false,name = "page_size") pageSize: Optional<String>,
+        @PathVariable(required = false, name = "page") page: Optional<String>,
+        @PathVariable(required = false, name = "sort") sort: Optional<String>,
+        @PageableDefault(size = PAGE_SIZE_DEFAULT) pageable: Pageable
+    ): ResponseEntity<UserCollectionResponse> {
+
+        val results = UserCollectionResponse(userService.retrieveAllUser())
+
         logger.info { "request received [GET] /users" }
-        return userService.retrieveAllUser()
+        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(results)
     }
 
     @DeleteMapping("/{userId}")
