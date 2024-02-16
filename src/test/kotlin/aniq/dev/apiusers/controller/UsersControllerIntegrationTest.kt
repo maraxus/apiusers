@@ -260,26 +260,21 @@ class UsersControllerIntegrationTest (){
                 }
             }
     }
-//    @Test
-//    fun getAllShouldReturnListOfUsers() {
-//        val randomNumberOfUsers = (1..20).random()
-//        val defaultPageSize = 15
-//        populateUsers(randomNumberOfUsers)
-//        mockMvc.get("/users")
-//            .andExpect {
-//                status { if(randomNumberOfUsers > defaultPageSize) { isPartialContent() } else { isOk() } }
-//            }
-//            .andExpect {
-//                content {
-//                    jsonPath("$.records") { isArray() }
-//                    if(randomNumberOfUsers > defaultPageSize) {
-//                        jsonPath( "$.records", hasSize<Array<Any>>(randomNumberOfUsers))
-//                    } else {
-//                        jsonPath( "$.records", hasSize<Array<Any>>(defaultPageSize))
-//                    }
-//                }
-//            }
-//    }
+    @Test
+    fun getAllShouldReturnListOfUsersPagedShouldFetchNextPage() {
+        val defaultPageSize = 15
+        val randomNumberOfUsers = (defaultPageSize..25).random()
+        populateUsers(randomNumberOfUsers)
+        mockMvc.get("/users?page=1")
+            .andExpect {
+                status { isOk() }
+            }
+            .andExpect {
+                content {
+                    jsonPath( "$.records", hasSize<Array<Any>>(randomNumberOfUsers - defaultPageSize))
+                }
+            }
+    }
 
     private fun populateUsers(numberOfUsers: Int) {
         (1..numberOfUsers).iterator().forEach {
