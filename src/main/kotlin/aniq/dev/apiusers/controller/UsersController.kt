@@ -1,40 +1,22 @@
 package aniq.dev.apiusers.controller
 
 import aniq.dev.apiusers.dto.UserDTO
+import aniq.dev.apiusers.entity.User
 import aniq.dev.apiusers.service.UserService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.validation.Valid
-import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties.Pageable
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.data.web.PageableDefault
-import org.springframework.data.web.PageableHandlerMethodArgumentResolver
-import org.springframework.data.web.SortHandlerMethodArgumentResolver
-import org.springframework.data.web.config.PageableHandlerMethodArgumentResolverCustomizer
-import org.springframework.data.web.config.SortHandlerMethodArgumentResolverCustomizer
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
 import java.util.*
+import kotlin.jvm.optionals.getOrElse
 
 
 const val PAGE_SIZE_DEFAULT = 15
 
 private val logger = KotlinLogging.logger {}
-
-@Configuration
-class PageableCustomizer {
-    @Bean
-    fun pageableCustomizer(): PageableHandlerMethodArgumentResolverCustomizer {
-        return PageableHandlerMethodArgumentResolverCustomizer { p: PageableHandlerMethodArgumentResolver ->
-            p.setSizeParameterName("page_size")
-
-        }
-    }
-
-}
 
 @Validated
 @RestController
@@ -64,16 +46,20 @@ class UsersController(val userService: UserService) {
 
     @GetMapping
     fun retrieveAllUser(
-        @PathVariable(required = false,name = "page_size") pageSize: Optional<String>,
-        @PathVariable(required = false, name = "page") page: Optional<String>,
+        @PathVariable(required = false,name = "page_size") pageSize: Optional<Int>,
+        @PathVariable(required = false, name = "page") page: Optional<Int>,
         @PathVariable(required = false, name = "sort") sort: Optional<String>,
-        @PageableDefault(size = PAGE_SIZE_DEFAULT) pageable: Pageable
-    ): ResponseEntity<UserCollectionResponse> {
+    ): ResponseEntity<PagedResults<UserDTO>> {
 
-        val results = UserCollectionResponse(userService.retrieveAllUser())
-
+        val results = userService.retrieveAllUser(page.getOrElse { 0 }, pageSize.getOrElse{ 15 })
+        val status = if (results.isLast or results.isEmpty) HttpStatus.OK else HttpStatus.PARTIAL_CONTENT
+        val responseBody = PagedResults<UserDTO>(
+            results.content.map { it.asDto() },
+            results.number,
+            results.size,
+            results.totalElements)
         logger.info { "request received [GET] /users" }
-        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(results)
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(responseBody)
     }
 
     @DeleteMapping("/{userId}")
@@ -83,4 +69,15 @@ class UsersController(val userService: UserService) {
         return userService.removeUser(userId)
     }
 
+}
+
+class PagedResults<T>(
+    val records: List<T>,
+    val page: Int,
+    val pageSize: Int,
+    val total: Long
+)
+
+private fun User.asDto(): UserDTO {
+    return UserDTO(id, nick, name, birthDate, stack)
 }

@@ -4,6 +4,9 @@ import aniq.dev.apiusers.dto.UserDTO
 import aniq.dev.apiusers.entity.User
 import aniq.dev.apiusers.exception.UserNotFoundException
 import aniq.dev.apiusers.repository.UserRepositoryInterface
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 
 @Service
@@ -37,7 +40,11 @@ class UserService(val userRepository: UserRepositoryInterface) {
         return foundUser.asDto()
     }
 
-    fun retrieveAllUser(): List<UserDTO> = userRepository.findAll().map { user -> user.asDto() }
+    fun retrieveAllUser(pageNumber: Int, pageSize: Int): Page<User> {
+        val sort = Sort.unsorted()
+        val pageable = PageRequest.of(pageNumber, pageSize, sort)
+        return userRepository.findAll(pageable)
+    }
 
     fun removeUser(userId: Int) {
         userRepository.findById(userId)
