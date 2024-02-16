@@ -46,12 +46,12 @@ class UsersController(val userService: UserService) {
 
     @GetMapping
     fun retrieveAllUser(
-        @PathVariable(required = false,name = "page_size") pageSize: Optional<Int>,
-        @PathVariable(required = false, name = "page") page: Optional<Int>,
-        @PathVariable(required = false, name = "sort") sort: Optional<String>,
+        @RequestParam(required = false,name = "page_size") pageSize: Optional<Int>,
+        @RequestParam(required = false, name = "page") page: Optional<Int>,
+        @RequestParam(required = false, name = "sort") sort: Optional<String>,
     ): ResponseEntity<PagedResults<UserDTO>> {
 
-        val results = userService.retrieveAllUser(page.getOrElse { 0 }, pageSize.getOrElse{ 15 })
+        val results = userService.retrieveAllUser(page.getOrElse { 0 }, pageSize.getOrElse{ PAGE_SIZE_DEFAULT })
         val status = if (results.isLast or results.isEmpty) HttpStatus.OK else HttpStatus.PARTIAL_CONTENT
         val responseBody = PagedResults<UserDTO>(
             results.content.map { it.asDto() },
