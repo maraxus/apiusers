@@ -12,6 +12,7 @@ import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
 import java.util.*
 import kotlin.jvm.optionals.getOrElse
+import kotlin.jvm.optionals.getOrNull
 
 
 const val PAGE_SIZE_DEFAULT = 15
@@ -50,8 +51,8 @@ class UsersController(val userService: UserService) {
         @RequestParam(required = false, name = "page") page: Optional<Int>,
         @RequestParam(required = false, name = "sort") sort: Optional<String>,
     ): ResponseEntity<PagedResults<UserDTO>> {
-
-        val results = userService.retrieveAllUser(page.getOrElse { 0 }, pageSize.getOrElse{ PAGE_SIZE_DEFAULT })
+        val sortQuery = buildSortQuery(sort)
+        val results = userService.retrieveAllUser(page.getOrElse { 0 }, pageSize.getOrElse{ PAGE_SIZE_DEFAULT }, sortQuery)
         val status = if (results.isLast or results.isEmpty) HttpStatus.OK else HttpStatus.PARTIAL_CONTENT
         val responseBody = PagedResults<UserDTO>(
             results.content.map { it.asDto() },
@@ -60,6 +61,19 @@ class UsersController(val userService: UserService) {
             results.totalElements)
         logger.info { "request received [GET] /users" }
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(responseBody)
+    }
+
+    private fun buildSortQuery(sortParam: Optional<String>): Optional<List<Pair<String, String>>> {
+        val orderDirection: (String)->(Pair<String,String>) =
+            orderDirection@{ queryAttribute:String ->
+                val firstChar = queryAttribute.first().takeIf { it == '-' || it == '+' }
+                return@orderDirection when (firstChar) {
+                    '-' -> Pair(queryAttribute.drop(1), "DESCENDING")
+                    '+' -> Pair(queryAttribute.drop(1), "ASCENDING")
+                    else -> Pair(queryAttribute, "ASCENDING")
+                }
+        }
+        return Optional.ofNullable<List<Pair<String, String>>>(sortParam.getOrNull()?.split(',')?.toList()?.map(orderDirection))
     }
 
     @DeleteMapping("/{userId}")

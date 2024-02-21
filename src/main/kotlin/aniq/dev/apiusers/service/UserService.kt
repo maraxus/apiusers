@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
+import java.util.Optional
 
 @Service
 class UserService(val userRepository: UserRepositoryInterface) {
@@ -40,8 +41,24 @@ class UserService(val userRepository: UserRepositoryInterface) {
         return foundUser.asDto()
     }
 
-    fun retrieveAllUser(pageNumber: Int, pageSize: Int): Page<User> {
-        val sort = Sort.unsorted()
+    fun retrieveAllUser(pageNumber: Int, pageSize: Int, sortQuery: Optional<List<Pair<String,String>>>): Page<User> {
+        var sort = Sort.unsorted()
+        sortQuery.ifPresent {
+            val attributes = sortQuery.get().iterator()
+            val sortingAttribute = attributes.next()
+            sort = if (sortingAttribute.second == "DESCENDING") {
+                Sort.by(sortingAttribute.first).descending()
+            } else {
+                Sort.by(sortingAttribute.first)
+            }
+            attributes.forEachRemaining {
+                if (it.second == "ASCENDING") {
+                    sort.and(Sort.by(sortingAttribute.first).descending())
+                } else {
+                    sort.and(Sort.by(sortingAttribute.first))
+                }
+            }
+        }
         val pageable = PageRequest.of(pageNumber, pageSize, sort)
         return userRepository.findAll(pageable)
     }

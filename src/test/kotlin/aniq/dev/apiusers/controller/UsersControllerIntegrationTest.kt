@@ -152,7 +152,7 @@ class UsersControllerIntegrationTest (){
         val validIdtoOperate = saveValidUserRetrunId()
         val url = "/users/$validIdtoOperate"
 
-        val result = mockMvc.get(url)
+        mockMvc.get(url)
             .andExpect { status { isOk() } }
             .andExpect { jsonPath("$.id"){ value(validIdtoOperate) } }
             .andExpect { jsonPath("$.name"){ value(validName) } }
@@ -222,7 +222,7 @@ class UsersControllerIntegrationTest (){
 
     @Test
      fun deleteShouldFailWithUnknownId() {
-        val url: String = "/users/-1"
+        val url = "/users/-1"
         mockMvc.delete(url)
             .andExpect {
                 status { isNotFound() }
