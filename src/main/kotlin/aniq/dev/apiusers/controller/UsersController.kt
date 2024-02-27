@@ -1,5 +1,6 @@
 package aniq.dev.apiusers.controller
 
+import aniq.dev.apiusers.controller.response.PagedResults
 import aniq.dev.apiusers.dto.UserDTO
 import aniq.dev.apiusers.entity.User
 import aniq.dev.apiusers.service.UserService
@@ -51,10 +52,13 @@ class UsersController(val userService: UserService) {
         @RequestParam(required = false, name = "page") page: Optional<Int>,
         @RequestParam(required = false, name = "sort") sort: Optional<String>,
     ): ResponseEntity<PagedResults<UserDTO>> {
-        val sortQuery = buildSortQuery(sort)
-        val results = userService.retrieveAllUser(page.getOrElse { 0 }, pageSize.getOrElse{ PAGE_SIZE_DEFAULT }, sortQuery)
+        val results = userService.retrieveAllUser(
+            pageNumber = page.getOrElse { 0 },
+            pageSize = pageSize.getOrElse { PAGE_SIZE_DEFAULT },
+            sortQuery = buildSortQuery(sort)
+        )
         val status = if (results.isLast or results.isEmpty) HttpStatus.OK else HttpStatus.PARTIAL_CONTENT
-        val responseBody = PagedResults<UserDTO>(
+        val responseBody = PagedResults(
             results.content.map { it.asDto() },
             results.number,
             results.size,
@@ -84,13 +88,6 @@ class UsersController(val userService: UserService) {
     }
 
 }
-
-class PagedResults<T>(
-    val records: List<T>,
-    val page: Int,
-    val pageSize: Int,
-    val total: Long
-)
 
 private fun User.asDto(): UserDTO {
     return UserDTO(id, nick, name, birthDate, stack)
