@@ -64,7 +64,7 @@ class GlobalExceptionHandler: ResponseEntityExceptionHandler() {
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleAllExceptions(ex: Exception, request: WebRequest): ResponseEntity<Any> {
+    fun handleAllExceptions(ex: Exception, request: WebRequest): ResponseEntity<ErrorResponse<ErrorReport>> {
         val errorCode = "${HttpStatus.INTERNAL_SERVER_ERROR}-01"
         logger.error("request=${request.getDescription(false)} --- Internal Server Error observed  error=${ex.message} ", ex)
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
