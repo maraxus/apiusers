@@ -1,8 +1,9 @@
 package aniq.dev.apiusers.service
 
+import aniq.dev.apiusers.dto.StackDTO
 import aniq.dev.apiusers.dto.UserDTO
 import aniq.dev.apiusers.exception.UserNotFoundException
-import aniq.dev.apiusers.repository.UserRepositoryInterface
+import aniq.dev.apiusers.repository.UserRepository
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -12,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.orm.jpa.JpaSystemException
 import java.time.LocalDateTime
+import java.util.UUID
 
 @SpringBootTest
 class UserServiceIntegrationTest {
@@ -20,7 +22,7 @@ class UserServiceIntegrationTest {
     lateinit var service: UserService
 
     @Autowired
-    lateinit var userRepository: UserRepositoryInterface
+    lateinit var userRepository: UserRepository
 
     @AfterEach
     fun cleanUp() {
@@ -31,7 +33,7 @@ class UserServiceIntegrationTest {
     fun addValidUser() {
         val user = UserDTOFactory.validNullId()
         val savedUser = service.addUser(user)
-        assertTrue(savedUser.id is Int)
+        assertTrue(savedUser.id is UUID)
         assertTrue(user.copy(id = savedUser.id) == savedUser)
     }
 
@@ -105,7 +107,7 @@ class UserServiceIntegrationTest {
     @Test
     fun removeInvalidUserFails() {
         assertThrows<UserNotFoundException> {
-            service.removeUser(-1)
+            service.removeUser(UUID.randomUUID())
         }
     }
 }
@@ -116,7 +118,7 @@ object UserDTOFactory {
         "Blue pen",
         "John Doe",
         LocalDateTime.parse("2087-07-02T15:00:45"),
-        mutableSetOf("javascript", "Go")
+        mutableSetOf(StackDTO("javascript", 70), StackDTO("Go", 50))
     )
 
     fun validNullId(): UserDTO {
@@ -132,7 +134,13 @@ object UserDTOFactory {
     }
 
     fun stackWithTooLongMemberValue(): UserDTO {
-        return exampleUser.copy(stack = mutableSetOf("Javascript", "Go", "Blastoise".padEnd(44, 'e')))
+        return exampleUser.copy(
+            stack = mutableSetOf(
+                StackDTO("Javascript", 50),
+                StackDTO("Go", 30),
+                StackDTO("Blastoise".padEnd(44, 'e'), 50)
+            )
+        )
     }
 
     fun validUsersToSave(lenght: Int): List<UserDTO> {
