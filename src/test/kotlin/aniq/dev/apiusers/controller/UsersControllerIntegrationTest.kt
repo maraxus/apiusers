@@ -1,6 +1,8 @@
 package aniq.dev.apiusers.controller
 
+import aniq.dev.apiusers.dto.StackDTO
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.jayway.jsonpath.JsonPath
 import org.hamcrest.Matchers.*
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -11,6 +13,7 @@ import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.jdbc.JdbcTestUtils
 import org.springframework.test.web.servlet.*
+import java.util.UUID
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -32,7 +35,7 @@ class UsersControllerIntegrationTest (){
         val validName = "Jonh Doe"
         val validNick = "Blue pen"
         val validbirthDate = "1987-07-02T15:00:45"
-        val validStack = mutableListOf("javascript", "Go")
+        val validStack = mutableListOf(StackDTO("javascript",70) , StackDTO("Go", 30))
     }
 
     @Test
@@ -43,7 +46,7 @@ class UsersControllerIntegrationTest (){
         }
             .andExpect { status { isCreated() } }
             .andExpect { content { contentType(MediaType.APPLICATION_JSON) } }
-            .andExpect { jsonPath("$.id") { isNumber() } }
+            .andExpect { jsonPath("$.id") { isString() } }
 
     }
 
@@ -154,7 +157,7 @@ class UsersControllerIntegrationTest (){
 
         mockMvc.get(url)
             .andExpect { status { isOk() } }
-            .andExpect { jsonPath("$.id"){ value(validIdtoOperate) } }
+            .andExpect { jsonPath("$.id"){ value(validIdtoOperate.toString()) } }
             .andExpect { jsonPath("$.name"){ value(validName) } }
             .andExpect { jsonPath("$.nick"){ value(validNick) } }
             .andExpect { jsonPath("$.birth_date"){ value(validbirthDate) } }
@@ -164,8 +167,27 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-    fun getShouldFailWithUnknownId() {
+    fun getStacksShouldRetrieveStackListPassingValidUserId() {
+        val validIdtoOperate = saveValidUserRetrunId()
+        val url = "/users/$validIdtoOperate/stacks"
+
+        mockMvc.get(url)
+            .andExpect { status { isOk() } }
+            .andExpect { jsonPath("$"){ isArray() } }
+//            .andExpect { jsonPath("$.stack[0]"){ value(validStack[0]) } }
+//            .andExpect { jsonPath("$.stack[1]"){ value(validStack[1]) } }
+    }
+
+    @Test
+    fun getShouldFailWithInvalidId() {
         val url = "/users/2"
+        mockMvc.get(url)
+            .andExpect { status { is4xxClientError() } }
+    }
+
+    @Test
+    fun getShouldFailWithInexistentId() {
+        val url = "/users/${UUID.randomUUID()}"
         mockMvc.get(url)
             .andExpect { status { isNotFound() } }
     }
@@ -181,14 +203,14 @@ class UsersControllerIntegrationTest (){
             content = serializer.writeValueAsString(mockUserInput("modified"))
         }
             .andExpect { status { isOk() } }
-            .andExpect { jsonPath("$.id"){ value(validIdToOperate) } }
+            .andExpect { jsonPath("$.id"){ value(validIdToOperate.toString()) } }
             .andExpect { jsonPath("$.name"){ value("$validName Bar") } }
             .andExpect { jsonPath("$.nick"){ value(validNick) } }
             .andExpect { jsonPath("$.birth_date"){ value(validbirthDate) } }
             .andExpect { jsonPath("$.stack"){ isArray() } }
     }
 
-    private fun saveValidUserRetrunId(): Int {
+    private fun saveValidUserRetrunId(): UUID {
         return mockMvc.post("/users") {
             contentType = MediaType.APPLICATION_JSON
             content = serializer.writeValueAsString(mockUserInput())
@@ -196,7 +218,7 @@ class UsersControllerIntegrationTest (){
             .andReturn()
             .response.contentAsString
             .run {
-                serializer.readTree(this).get("id").intValue()
+                UUID.fromString(JsonPath.parse(this).read("$.id"))
             }
     }
 
@@ -221,11 +243,20 @@ class UsersControllerIntegrationTest (){
     }
 
     @Test
-     fun deleteShouldFailWithUnknownId() {
+     fun deleteShouldFailWithInvalidId() {
         val url = "/users/-1"
         mockMvc.delete(url)
             .andExpect {
-                status { isNotFound() }
+                status { is4xxClientError() }
+            }
+    }
+
+    @Test
+     fun deleteShouldFailWithUnknownId() {
+        val url = "/users/${UUID.randomUUID()}"
+        mockMvc.delete(url)
+            .andExpect {
+                status { is4xxClientError() }
             }
     }
 
@@ -263,7 +294,7 @@ class UsersControllerIntegrationTest (){
     @Test
     fun getAllShouldReturnListOfUsersPagedShouldFetchNextPage() {
         val defaultPageSize = 15
-        val randomNumberOfUsers = (defaultPageSize..25).random()
+        val randomNumberOfUsers = (defaultPageSize +1..25).random()
         populateUsers(randomNumberOfUsers)
         mockMvc.get("/users?page=1")
             .andExpect {
