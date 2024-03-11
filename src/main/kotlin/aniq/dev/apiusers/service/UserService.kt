@@ -24,7 +24,7 @@ class UserService(val userRepository: UserRepository, val stackRepository: Stack
         }
         user.stack?.map {
             userToCreate.stack?.add(
-                aniq.dev.apiusers.entity.Stack(
+                Stack(
                     name = it.name,
                     level = it.level,
                     user = userToCreate,
