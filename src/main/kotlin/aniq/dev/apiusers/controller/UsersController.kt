@@ -1,10 +1,12 @@
 package aniq.dev.apiusers.controller
 
 import aniq.dev.apiusers.controller.response.PagedResults
+import aniq.dev.apiusers.dto.StackDTO
 import aniq.dev.apiusers.dto.UserDTO
 import aniq.dev.apiusers.entity.User
 import aniq.dev.apiusers.service.UserService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.transaction.Transactional
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -14,7 +16,6 @@ import org.springframework.web.bind.annotation.*
 import java.util.*
 import kotlin.jvm.optionals.getOrElse
 import kotlin.jvm.optionals.getOrNull
-
 
 const val PAGE_SIZE_DEFAULT = 15
 
@@ -34,16 +35,24 @@ class UsersController(val userService: UserService) {
 
     @PutMapping("/{userId}")
     @ResponseStatus(HttpStatus.OK)
-    fun editUser(@Valid @RequestBody userInput: UserDTO,@PathVariable userId: Int): UserDTO {
+    @Transactional
+    fun editUser(@Valid @RequestBody userInput: UserDTO,@PathVariable userId: UUID): UserDTO {
         logger.info { "request received [PUT] /users/$userId" }
-        return userService.editUser(userInput, userId)
+        return userService.editUser(userInput, UUID.fromString(userId.toString()))
     }
 
     @GetMapping("/{userId}")
     @ResponseStatus(HttpStatus.OK)
-    fun retrieveUser(@PathVariable userId: Int): UserDTO {
+    fun retrieveUser(@PathVariable userId: UUID): UserDTO {
         logger.info { "request received [GET] /users/$userId" }
-        return userService.retrieveUser(userId)
+        return userService.retrieveUser(UUID.fromString(userId.toString()))
+    }
+
+    @GetMapping("/{userId}/stacks")
+    @ResponseStatus(HttpStatus.OK)
+    fun retrieveUserStacks(@PathVariable userId: UUID): MutableSet<StackDTO> {
+        logger.info { "request received [GET] /users/$userId/stacks" }
+        return userService.retrieveUserStacks(userId)
     }
 
     @GetMapping
@@ -82,13 +91,13 @@ class UsersController(val userService: UserService) {
 
     @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun removeUser(@PathVariable userId: Int){
+    fun removeUser(@PathVariable userId: UUID){
         logger.info { "request received [DELETE] /users/$userId" }
-        return userService.removeUser(userId)
+        return userService.removeUser(UUID.fromString(userId.toString()))
     }
 
 }
 
 private fun User.asDto(): UserDTO {
-    return UserDTO(id, nick, name, birthDate, stack)
+    return UserDTO(id, nick, name, birthDate, stack?.map { StackDTO(it.name,it.level) }?.toSet())
 }
