@@ -1,5 +1,6 @@
 package aniq.dev.apiusers.dto
 
+import aniq.dev.apiusers.validator.ValidStackConstraint
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Past
 import jakarta.validation.constraints.Size
@@ -22,5 +23,6 @@ data class UserDTO(
     @NotBlank
     var birthDate: LocalDateTime,
 
+    @ValidStackConstraint
     var stack: Set<StackDTO>? = mutableSetOf()
 )
