@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import java.time.LocalDateTime
+import java.util.*
 
 // test decisions in kotest: Integration Tests -> FeatureSpec | Unit Tests -> BehaviorSpec
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -36,7 +37,6 @@ class UsersControllerIntegrationTest2: FeatureSpec() {
 
     init {
         afterTest {
-            JdbcTestUtils.deleteFromTables(jdbcTemplate, "user_stack")
             JdbcTestUtils.deleteFromTables(jdbcTemplate, "users")
         }
 
@@ -111,7 +111,7 @@ class UsersControllerIntegrationTest2: FeatureSpec() {
                     newUser
                 )
             }.andReturn().response.contentAsString
-            usersToCompare.add(newUser.copy(id = serializer.readTree(savedUser).get("id").intValue()))
+            usersToCompare.add(newUser.copy(id = UUID.fromString(JsonPath.parse(savedUser).read("$.id"))))
         }
         return usersToCompare
     }
