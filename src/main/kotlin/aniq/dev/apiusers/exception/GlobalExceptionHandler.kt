@@ -79,7 +79,7 @@ class GlobalExceptionHandler: ResponseEntityExceptionHandler() {
     fun handleMethodArgumentTypeMismatch(
         ex: MethodArgumentTypeMismatchException,
         request: WebRequest
-    ): ResponseEntity<Any> {
+    ): ResponseEntity<ErrorResponse<ErrorReport>> {
         val errorCode = "${HttpStatus.BAD_REQUEST}-03"
         logger.error(
             "request=${request.getDescription(false)} --- MethodArgumentTypeMismatchException observed  ${ex.message} - request: ${
@@ -94,18 +94,25 @@ class GlobalExceptionHandler: ResponseEntityExceptionHandler() {
     }
 
     @ExceptionHandler(UserNotFoundException::class)
-    fun handleNotFoundException(exception: UserNotFoundException, webRequest: WebRequest): ResponseEntity<Any> {
+    fun handleNotFoundException(exception: UserNotFoundException, webRequest: WebRequest): ResponseEntity<ErrorResponse<ErrorReport>> {
         val errorCode = "${HttpStatus.NOT_FOUND}-01"
         logger.error("request=${webRequest.getDescription(false)} 404 not found  error=${exception.message}", exception)
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse.forErrors(listOf("${exception.message}"),errorCode))
     }
 
     @ExceptionHandler(JpaSystemException::class)
-    fun handleJpaSystemException(exception: JpaSystemException, webRequest: WebRequest): ResponseEntity<Any> {
+    fun handleJpaSystemException(exception: JpaSystemException, webRequest: WebRequest): ResponseEntity<ErrorResponse<ErrorReport>> {
         val errorCode = "${HttpStatus.UNPROCESSABLE_ENTITY}-01"
         logger.debug("the real cause: ${exception.mostSpecificCause}")
         logger.error("request=${webRequest.getDescription(false)} 422 failed validating data constraints for the input error=${exception.message}", exception)
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ErrorResponse.forErrors(listOf("${exception.message}"),errorCode))
+    }
+
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgumentException(ex: IllegalArgumentException, request: WebRequest): ResponseEntity<ErrorResponse<ErrorReport>> {
+        logger.debug("the real cause: ${ex.cause}")
+        val errorCode = "${HttpStatus.BAD_REQUEST}-02"
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorResponse.forErrors(listOf("ex.message"),errorCode))
     }
 
 }
@@ -115,12 +122,12 @@ class ErrorReport(
     val description: String
 )
 
-class ErrorResponse(
-    val errorMessages: List<ErrorReport>
+class ErrorResponse<T>(
+    val errorMessages: List<T>
 ) {
     companion object {
-        fun forErrors(errorMessages: List<String>, errorCode: String): ErrorResponse {
-            return ErrorResponse(
+        fun forErrors(errorMessages: List<String>, errorCode: String): ErrorResponse<ErrorReport> {
+            return ErrorResponse<ErrorReport>(
                 errorMessages = errorMessages.map { ErrorReport(errorCode, it) }
             )
         }
