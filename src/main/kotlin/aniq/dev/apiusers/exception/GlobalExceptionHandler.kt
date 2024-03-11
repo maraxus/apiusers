@@ -58,7 +58,7 @@ class GlobalExceptionHandler: ResponseEntityExceptionHandler() {
             }", ex
         )
 
-        val error: String = "Invalid request body"
+        val error = "Invalid request body"
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).contentType(MediaType.APPLICATION_JSON)
             .body(ErrorResponse.forErrors(listOf(error), errorCode))
     }
