@@ -5,9 +5,10 @@ import jakarta.validation.constraints.Past
 import jakarta.validation.constraints.Size
 import org.springframework.format.annotation.DateTimeFormat
 import java.time.LocalDateTime
+import java.util.UUID
 
 data class UserDTO(
-    var id: Int?,
+    var id: UUID?,
 
     @field:Size(max=32, message = "Size should not be higher than 32 characters")
     var nick: String?,
@@ -21,5 +22,5 @@ data class UserDTO(
     @NotBlank
     var birthDate: LocalDateTime,
 
-    var stack: Set<String>? = mutableSetOf()
+    var stack: Set<StackDTO>? = mutableSetOf()
 )
